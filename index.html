@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>USDTspinner</title>
+  <script src='//libtl.com/sdk.js' data-zone='9639956' data-sdk='show_9639956' async></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+    body {
+        background-color: #3E2723;
+        background-image: url('https://www.toptal.com/designers/subtlepatterns/uploads/brick-wall.png');
+        background-repeat: repeat;
+        color: #fff; text-align: center; padding: 10px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        min-height: 100vh; position: relative;
+        padding-top: 60px; padding-bottom: 60px;
+    }
+    h1 { margin: 10px 0; color: #ffcc00; text-shadow: 2px 2px 4px #000; }
+    .coins {
+        margin: 15px 0; font-size: 22px; font-weight: bold; text-shadow: 1px 1px 3px #000;
+    }
+    .wheel-container {
+        margin-top: 15px; width: 300px; height: 300px; position: relative;
+    }
+    #wheel {
+        width: 100%; height: 100%; transition: transform 5s ease-out;
+    }
+    .pointer {
+      width: 0; height: 0;
+      border-left: 25px solid transparent; border-right: 25px solid transparent;
+      border-top: 35px solid #32CD32;
+      position: absolute; top: -15px; left: 50%;
+      transform: translateX(-50%); z-index: 10;
+      filter: drop-shadow(0px -2px 3px rgba(0,0,0,0.5));
+    }
+    .spin-now-btn {
+      padding: 15px 30px; background: #6A0DAD;
+      border: none; color: #fff; font-weight: bold; border-radius: 10px;
+      margin-top: 20px; cursor: pointer; font-size: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .action-buttons-container {
+        display: flex; justify-content: center; gap: 15px; margin-top: 15px;
+    }
+    .action-btn {
+        padding: 10px 20px; border: none; font-weight: bold;
+        border-radius: 10px; cursor: pointer; font-size: 18px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .tasks-btn { background: #00ffcc; color: #000; }
+    .withdraw-btn { background: #ff8c00; color: #fff; }
+    .ad-top, .ad-bottom {
+      max-width: 100%; width: 320px; height: 50px;
+      left: 50%; transform: translateX(-50%);
+      position: absolute; background: #333;
+    }
+    .ad-top { top: 5px; }
+    .ad-bottom { bottom: 5px; }
+    .modal {
+      display: none; position: fixed; z-index: 30; left: 0; top: 0;
+      width: 100%; height: 100%; overflow: auto;
+      background-color: rgba(0,0,0,0.6); padding-top: 60px;
+    }
+    .modal-content {
+      background-color: #222; margin: 5% auto; padding: 20px;
+      border: 1px solid #888; width: 90%; max-width: 320px;
+      border-radius: 10px; position: relative;
+    }
+    .close-btn {
+      color: #aaa; position: absolute; top: 5px; right: 15px;
+      font-size: 28px; font-weight: bold; cursor: pointer;
+    }
+    .task-box, .withdraw-box { text-align: left; }
+    .task-box h3, .withdraw-box h3 { color: #00ffcc; margin-bottom: 8px; }
+    .task-box button {
+      background: #00ffcc; color: #000; margin: 8px 0;
+      display: block; width: 100%; padding: 12px;
+      border: none; border-radius: 5px; font-weight: bold; font-size: 16px;
+    }
+    .withdraw-box p { font-size: 14px; margin-bottom: 10px; color: #ccc; }
+    .withdraw-box input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #555; background: #333; color: white; font-size: 16px; margin-bottom: 10px; }
+    .withdraw-box #coins-to-deduct { color: #ffc107; font-weight: bold; }
+    .withdraw-box button {
+      width: 100%; padding: 12px; border: none; border-radius: 5px;
+      font-size: 16px; font-weight: bold; margin-top: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .withdraw-box button:disabled {
+        background-color: #555; cursor: not-allowed;
+    }
+    .notification-container {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.5);
+      background-color: rgba(40, 40, 40, 0.9);
+      color: white; padding: 20px; border-radius: 15px; z-index: 1000;
+      display: flex; flex-direction: column; align-items: center; gap: 15px;
+      opacity: 0; visibility: hidden;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+    .notification-container.show {
+      opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1);
+    }
+    #notification-message {
+      font-size: 18px; font-weight: bold; text-align: center;
+    }
+    .checkmark { width: 80px; height: 80px; border-radius: 50%; display: block; stroke-width: 3; stroke: #fff; stroke-miterlimit: 10; margin: 0 auto; box-shadow: inset 0px 0px 0px #4CAF50; animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both; }
+    .checkmark__circle { stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 3; stroke-miterlimit: 10; stroke: #4CAF50; fill: none; animation: stroke .6s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
+    .checkmark__check { transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48; animation: stroke .3s cubic-bezier(0.65, 0, 0.45, 1) .8s forwards; }
+    @keyframes stroke { 100% { stroke-dashoffset: 0; } }
+    @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
+    @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 40px #4CAF50; } }
+  </style>
+</head>
+<body>
+
+  <div class="ad-top">
+    <script type="text/javascript">
+        atOptions = { 'key' : 'a4afc81f95fb29ea6db7478fe8d85167', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+    </script>
+    <script type="text/javascript" src="//www.highperformanceformat.com/a4afc81f95fb29ea6db7478fe8d85167/invoke.js"></script>
+  </div>
+
+  <h1>🎯 Spin & Win</h1>
+  <div class="coins">Your Coins: <span id="coins">0</span></div>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="300" height="300"></canvas>
+  </div>
+  <button class="spin-now-btn" onclick="spin()">🎰 SPIN NOW</button>
+  <div class="action-buttons-container">
+    <button class="action-btn tasks-btn" onclick="openTasksModal()">🧩 Tasks</button>
+    <button class="action-btn withdraw-btn" onclick="openWithdrawalModal()">💰 Withdraw</button>
+  </div>
+
+  <div id="tasksModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeTasksModal()">×</span>
+      <div class="task-box">
+        <h3>🧩 Tasks to Earn More:</h3>
+        <button onclick="claimDailyBonus()">🎁 Daily Bonus (25 coins)</button>
+        <button onclick="watchAd()">▶️ Watch Ad (20 coins)</button>
+        <button onclick="clickToEarn()">🖱️ Click & Earn (10 coins)</button>
+        <button onclick="referFriend()">🔗 Refer Friend (50 coins)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="withdrawalModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeWithdrawalModal()">×</span>
+      <div class="withdraw-box">
+        <h3>💰 Withdraw Coins</h3>
+        <p>Rate: 10,000 Coins = $1<br>Minimum Withdrawal: $10</p>
+        <input type="number" id="withdraw-amount-usd" placeholder="Enter amount in USD" oninput="updateDeductAmount()">
+        <input type="text" id="usdt-address" placeholder="Enter USDT (TRC20) Address">
+        <p>This will deduct <span id="coins-to-deduct">0</span> coins.</p>
+        <button id="process-withdrawal-btn" onclick="processWithdrawal()">Withdraw Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ad-bottom">
+    <script type="text/javascript">
+        atOptions = { 'key' : 'a4afc81f95fb29ea6db7478fe8d85167', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+    </script>
+    <script type="text/javascript" src="//www.highperformanceformat.com/a4afc81f95fb29ea6db7478fe8d85167/invoke.js"></script>
+  </div>
+  <div id="notification" class="notification-container">
+    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+      <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+      <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+    </svg>
+    <p id="notification-message"></p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const coinsDisplay = document.getElementById("coins");
+    const tasksModal = document.getElementById("tasksModal");
+    const withdrawalModal = document.getElementById("withdrawalModal");
+    const withdrawAmountInput = document.getElementById("withdraw-amount-usd");
+    const usdtAddressInput = document.getElementById("usdt-address");
+    const coinsToDeductSpan = document.getElementById("coins-to-deduct");
+    const processWithdrawalBtn = document.getElementById("process-withdrawal-btn");
+    const notificationContainer = document.getElementById("notification");
+    const notificationMessage = document.getElementById("notification-message");
+    let notificationTimeout;
+
+    // ESTA LÍNEA SE ENCARGA DE EMPEZAR CON 0 MONEDAS PARA USUARIOS NUEVOS
+    let coins = parseFloat(localStorage.getItem("coins")) || 0;
+    coinsDisplay.textContent = coins.toLocaleString();
+
+    const segments = [
+        { text: '02',   value: 2,   color: '#2ecc71' }, { text: '0.50', value: 0.5, color: '#e67e22' },
+        { text: '😭',    value: 0,   color: '#9b59b6' }, { text: '01',   value: 1,   color: '#e74c3c' },
+        { text: '0.50', value: 0.5, color: '#e84393' }, { text: '😭',    value: 0,   color: '#f1c40f' },
+        { text: '01',   value: 1,   color: '#F5DEB3' }, { text: '0.50', value: 0.5, color: '#D2B48C' },
+        { text: '😭',    value: 0,   color: '#34495e' }, { text: '02',   value: 2,   color: '#2c3e50' },
+        { text: '0.50', value: 0.5, color: '#3498db' }, { text: '😭',    value: 0,   color: '#1abc9c' }
+    ];
+
+    function drawWheel() {
+        const radius = canvas.width / 2;
+        const anglePerSegment = (2 * Math.PI) / segments.length;
+        ctx.beginPath(); ctx.arc(radius, radius, radius, 0, 2 * Math.PI); ctx.fillStyle = '#FFD700'; ctx.fill();
+        segments.forEach((segment, i) => {
+            const startAngle = i * anglePerSegment - (Math.PI / 2);
+            const endAngle = startAngle + anglePerSegment;
+            ctx.beginPath(); ctx.moveTo(radius, radius);
+            ctx.arc(radius, radius, radius - 5, startAngle, endAngle);
+            ctx.closePath(); ctx.fillStyle = segment.color; ctx.fill();
+            ctx.save(); ctx.fillStyle = 'white'; ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const textAngle = startAngle + anglePerSegment / 2;
+            const textX = radius + (radius * 0.6) * Math.cos(textAngle);
+            const textY = radius + (radius * 0.6) * Math.sin(textAngle);
+            ctx.translate(textX, textY); ctx.rotate(textAngle + Math.PI / 2);
+            ctx.fillText(segment.text, 0, 0); ctx.restore();
+        });
+    }
+
+    drawWheel();
+    let isSpinning = false;
+    let currentRotation = 0;
+
+    function runPreSpinAd() {
+        return new Promise(resolve => {
+            if (typeof show_9639956 === 'function') {
+                show_9639956().then(() => {
+                    resolve();
+                }).catch(e => {
+                    console.error("Ad error:", e);
+                    resolve();
+                });
+            } else {
+                console.error("Ad function not found.");
+                resolve();
+            }
+        });
+    }
+
+    async function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      
+      await runPreSpinAd();
+
+      const spinAngle = (Math.random() * 360) + 360 * 5;
+      const totalRotation = currentRotation + spinAngle;
+      canvas.style.transform = `rotate(${totalRotation}deg)`;
+      currentRotation = totalRotation;
+      setTimeout(() => {
+        const finalAngle = totalRotation % 360; const pointerAngle = 270;
+        const winningAngle = (360 - finalAngle + pointerAngle) % 360;
+        const resultIndex = Math.floor(winningAngle / (360 / segments.length));
+        const wonSegment = segments[resultIndex];
+        if (wonSegment.value > 0) {
+            showNotification(`You won ${wonSegment.value.toLocaleString()} coins!`);
+        } else {
+            showNotification(`Landed on ${wonSegment.text}. Better luck next time!`);
+        }
+        coins += wonSegment.value;
+        localStorage.setItem("coins", coins);
+        coinsDisplay.textContent = coins.toLocaleString();
+        isSpinning = false;
+      }, 5000);
+    }
+    
+    function showNotification(message) {
+      clearTimeout(notificationTimeout);
+      notificationMessage.textContent = message;
+      notificationContainer.classList.add("show");
+      notificationTimeout = setTimeout(() => {
+        notificationContainer.classList.remove("show");
+      }, 2500);
+    }
+
+    function openTasksModal() { tasksModal.style.display = "block"; }
+    function closeTasksModal() { tasksModal.style.display = "none"; }
+    function openWithdrawalModal() { withdrawalModal.style.display = "block"; updateDeductAmount(); }
+    function closeWithdrawalModal() { withdrawalModal.style.display = "none"; }
+    
+    window.onclick = function(event) {
+      if (event.target == tasksModal) closeTasksModal();
+      if (event.target == withdrawalModal) closeWithdrawalModal();
+    }
+
+    function claimDailyBonus() {
+        const today = new Date().toDateString();
+        const lastClaimDate = localStorage.getItem("lastClaimDate");
+        if (lastClaimDate === today) {
+            showNotification("Bonus already claimed today!");
+        } else {
+            showNotification("+25 Bonus Coins!"); coins += 25;
+            localStorage.setItem("coins", coins); coinsDisplay.textContent = coins.toLocaleString();
+            localStorage.setItem("lastClaimDate", today);
+        }
+        closeTasksModal();
+    }
+
+    function watchAd() {
+      closeTasksModal();
+      if (typeof show_9639956 === 'function') {
+        show_9639956().then(() => {
+            showNotification("+20 Coins!"); coins += 20;
+            localStorage.setItem("coins", coins); coinsDisplay.textContent = coins.toLocaleString();
+        }).catch(e => console.error("Ad error:", e));
+      } else {
+        showNotification("Ad feature not available.");
+      }
+    }
+
+    function clickToEarn() {
+      closeTasksModal();
+      if (typeof show_9639956 === 'function') {
+        show_9639956('pop').then(() => {
+            showNotification("+10 Coins!"); coins += 10;
+            localStorage.setItem("coins", coins); coinsDisplay.textContent = coins.toLocaleString();
+        }).catch(e => console.error("Ad error:", e));
+      } else {
+        showNotification("Ad feature not available.");
+      }
+    }
+
+    function referFriend() {
+      showNotification("+50 Coins for referral!");
+      window.open("https://t.me/share/url?url=http%3A%2F%2Ft.me%2FUSDTspinnerBot&text=¡Únete%20a%20mí%20en%20este%20bot%20de%20Spin%20%26%20Win!", "_blank");
+      coins += 50;
+      localStorage.setItem("coins", coins); coinsDisplay.textContent = coins.toLocaleString();
+      closeTasksModal();
+    }
+
+    const coinsPerDollar = 10000;
+    const minWithdrawalUSD = 10;
+
+    function updateDeductAmount() {
+        const amountUSD = parseFloat(withdrawAmountInput.value) || 0;
+        const coinsToDeduct = amountUSD * coinsPerDollar;
+        coinsToDeductSpan.textContent = coinsToDeduct.toLocaleString();
+
+        if (amountUSD >= minWithdrawalUSD && coins >= coinsToDeduct) {
+            processWithdrawalBtn.disabled = false;
+            processWithdrawalBtn.style.backgroundColor = '#ff8c00';
+        } else {
+            processWithdrawalBtn.disabled = true;
+            processWithdrawalBtn.style.backgroundColor = '#555';
+        }
+    }
+
+    function processWithdrawal() {
+        const amountUSD = parseFloat(withdrawAmountInput.value);
+        const usdtAddress = usdtAddressInput.value.trim();
+        const requiredCoins = amountUSD * coinsPerDollar;
+
+        if (!usdtAddress) {
+            showNotification("Please enter your USDT address.");
+            return;
+        }
+
+        if (amountUSD < minWithdrawalUSD || coins < requiredCoins) {
+            showNotification("Invalid withdrawal request.");
+            return;
+        }
+
+        coins -= requiredCoins;
+        localStorage.setItem("coins", coins);
+        coinsDisplay.textContent = coins.toLocaleString();
+        showNotification("Withdrawal successful!");
+        closeWithdrawalModal();
+        withdrawAmountInput.value = "";
+        usdtAddressInput.value = "";
+    }
+  </script>
+
+</body>
+</html>
