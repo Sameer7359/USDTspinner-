@@ -1,1 +1,1 @@
-# USDTspinner-
+ USDTspinner
